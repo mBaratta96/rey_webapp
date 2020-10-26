@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Operation</title>
+</head>
+<body>
+    <button onclick="goBack()">Home</button>
+    <button onClick="translateImg()">Translate</button>
+    <button onclick="rotateImg()">Rotate</button>
+    <button onclick="scaleImg()">Rescale</button>
+    <!--button onclick="eraserTool()">Eraser</button-->
+    <canvas id="canvas" width="1360" height="768" style="background: url('/images/original_rey22.png')">
+        Your browser does not support the canvas element.
+    </canvas>
+    <script>
+        var canvas = document.getElementById("canvas");
+        var ctx = canvas.getContext("2d");
+        var foreground = new Image();
+        foreground.src = "/images/rgba.png";
+        var transform = {
+            translate: {x: 0, y: 0},
+            scaleRange: 1,
+            angle: 0,
+        };
+        var op = 0;
+        var clicked = false;
+        foreground.onload = function(){
+            drawImg();
+        };
+        offset = canvas.getBoundingClientRect();
+        canvas.addEventListener('mousedown', function (e) {
+            x = e.pageX - Math.floor(offset.left);
+            y = e.pageY - Math.floor(offset.top);
+            clicked = true;
+        });
+        canvas.addEventListener('mouseup', function (e) {
+            clicked = false;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let x_end = e.pageX - Math.floor(offset.left);
+            let y_end = e.pageY - Math.floor(offset.top);
+            if(op===1) {
+                transform.translate.x = x_end-x;
+                transform.translate.y = y_end-y;
+                drawImg()
+                //op=0;
+            }else if(op===2){
+                transform.angle = Math.atan2(y_end-y, x_end-x)*(180/Math.PI);
+                drawImg()
+
+            }else if(op===3){
+                transform.scaleRange = x_end/x;
+                drawImg()
+            }else if(op===4){
+                done = true;
+            }
+        });
+        canvas.addEventListener('mousemove', function (e) {
+            if(clicked) {
+                let x_end = e.pageX - Math.floor(offset.left);
+                let y_end = e.pageY - Math.floor(offset.top);
+                if (op === 1) {
+                    transform.translate.x = x_end - x;
+                    transform.translate.y = y_end - y;
+                    drawImg()
+                    //op=0;
+                } else if (op === 2) {
+                    transform.angle = Math.atan2(y_end - y, x_end - x) * (180 / Math.PI);
+                    drawImg()
+
+                } else if (op === 3) {
+                    transform.scaleRange = x_end / x;
+                    drawImg()
+                }
+            }
+        });
+        function drawImg() {
+            //console.log(transform);
+            ctx.save();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.translate(transform.translate.x+foreground.width/2, transform.translate.y+foreground.height/2);
+            ctx.rotate(transform.angle* Math.PI / 180);// angle must be in radians
+            ctx.scale(transform.scaleRange, transform.scaleRange);
+            ctx.translate((-foreground.width)/2, (-foreground.height)/2);
+            ctx.drawImage(foreground, 0, 0);
+            ctx.restore();
+        }
+    </script>
+    <script>
+        function translateImg() {
+            op=1;
+        }
+    </script>
+    <script>
+        function rotateImg() {
+            op=2;
+        }
+    </script>
+    <script>
+        function scaleImg() {
+            op=3;
+        }
+    </script>
+    <script>
+        function eraserTool() {
+            op=4;
+            done = false;
+        }
+    </script>
+    <script>
+        function goBack() {
+            window.location.href='http://localhost:3000/'
+        }
+    </script>
+</body>
+</html>

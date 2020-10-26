@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prova Immagine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="public/stylesheets/style.css">
+    <script type="text/javascript" src="http://code.jquery.com/jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+    </script>
+</head>
+<body>
+    <h1>Image preview</h1>
+    <button onclick="reset()">Reset</button>
+    <button onclick="send()">Send</button>
+    <input type="file" name="inpFile" id="inpFile">
+    <canvas id="myCanvas"></canvas>
+    <!--img src="" alt="Image Preview" class="image-preview__image"-->
+
+    <script>
+        const inpFile = document.getElementById("inpFile");
+        let canvas = document.getElementById("myCanvas");
+        let ctx = canvas.getContext("2d");
+        ctx.save();
+        var ratio = 0;
+        inpFile.addEventListener("change", function () {
+            const file = this.files[0];
+            if (file){
+                let reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function(event){
+                    let img = new Image();
+                    img.onload = function(){
+                        canvas.width = 700;
+                        canvas.height = 700;
+                        var hRatio = canvas.width / img.width    ;
+                        var vRatio = canvas.height / img.height  ;
+                        ratio  = Math.min ( hRatio, vRatio );
+                        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, img.width*ratio, img.height*ratio);
+                        drawLine(canvas, ctx);
+                    }
+                    img.src = event.target.result;
+                }
+            } else{
+                let ctx = canvas.getContext("2d");
+                ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+
+            }
+        });
+
+    </script>
+    <script>
+        var points = [];
+        var n_point = 0;
+        function drawLine(canvas, ctx){
+            let offset = canvas.getBoundingClientRect();
+            canvas.addEventListener('mousedown', function (e) {
+
+                if(n_point<5) {
+                    points.push({
+                        x: e.pageX - Math.floor(offset.left),
+                        y: e.pageY - Math.floor(offset.top)
+                    });
+                }
+            });
+            canvas.addEventListener('mouseup', function (e) {
+                if(n_point<5) {
+                    let point = points[n_point];
+                    ctx.fillStyle = "#c82124";
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                    ctx.closePath();
+                    ctx.fill();
+                    n_point += 1;
+                    if(n_point>1){
+                        ctx.strokeStyle = "blue";
+                        ctx.beginPath();
+                        ctx.moveTo(points[n_point-2].x, points[n_point-2].y);
+                        ctx.lineTo(points[n_point-1].x, points[n_point-1].y);
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
+                    if(n_point===5){
+                        ctx.strokeStyle = "blue";
+                        ctx.beginPath();
+                        ctx.moveTo(points[n_point-1].x, points[n_point-1].y);
+                        ctx.lineTo(points[0].x, points[0].y);
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
+                }
+            })
+        }
+    </script>
+    <script>
+        function reset() {
+            points.splice(0,points.length);
+            n_point=0;
+            let file = inpFile.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function (event) {
+                    let img = new Image();
+                    img.onload = function () {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                    }
+                    img.src = event.target.result;
+                }
+            }
+
+        }
+    </script>
+    <script>
+        function send() {
+            if(n_point===5) {
+                for(let i=0; i<points.length; i++){
+                    points[i].x = points[i].x/ratio;
+                    points[i].y = points[i].y/ratio;
+                }
+                ctx.restore();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = "30px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("Loading...", canvas.width/2, canvas.height/2);
+                let data = JSON.stringify(points);
+                socket.emit('points', data, function (ack) {
+                    console.log(ack)
+                });
+                let file = inpFile.files[0];
+                socket.emit("image",  file, function (ack) {
+                    console.log(ack);
+                    window.location.href='http://localhost:3000/api'
+                });
+
+            }
+        }
+    </script>
+</body>
+</html>
