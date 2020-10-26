@@ -42,7 +42,7 @@ io.on('connection', function(socket){
         });
     })
 });
-
+//change here to python path
 function findHomography(fn) {
     let options = {
         mode: 'text',
